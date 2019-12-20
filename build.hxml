@@ -1,0 +1,18 @@
+
+#haxelib git sweet.functor https://github.com/JeremyGiner/sweet_functor.git
+
+-lib sweet.functor:git
+-lib sweet.ribbon:dev
+
+-cp src
+-cp vendor
+-main Main
+-hl bin/StorO.hl
+
+--next
+
+-cp src
+-cp vendor
+-cp test
+-main MainTest
+-hl bin/TEST.hl

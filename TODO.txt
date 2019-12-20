@@ -1,0 +1,250 @@
+
+
+
+WIP
+	Indexer
+		- sort list for non uniq indexer
+		on push add object to each indexer
+
+	? self generating multi depth map StringMap<RedBlackTree<...
+	!! relation key uniq to 
+	!! relation index update on parent update and child/prarent remove
+
+	test descriptor path
+	storage factory
+	create relationnal index
+		- relation{ mask, parent id, relation key }; indexed by child id; required by on delete
+		? child id; indexed by mask, parent id, relation key
+		? parent id; indexed by mask, child id, relation key
+	
+	event trigger
+		- avoid circular update/create : ? count persisted object during push
+		- on create
+		- on update
+		- on delete
+
+	test
+		- test parent relation
+			- store object with child
+			- load object with given parent
+			- load object with given child
+
+
+TODO
+	? garbage collector
+	? cache report usage 
+	dump db as code
+	
+Question
+	? who bear indexes
+		-> must be serialisable
+	? when are the files first created
+	? how to distinguish object requiring his own crate
+		-> try catch on KeyProvider
+
+storo
+
+load on demand ( when ReferenceStoro have his field != id called)
+	
+Storage
+	- load primary index
+	- find available page
+	- create page
+	- get page
+	? lock
+	
+
+Features
+	- index by id
+	- index object by value
+	- index by relation
+	? relation
+	- log?
+	- change id
+	- multiple storage?
+		- by default store by class 
+			- prevent via config
+	- init
+		? read config
+		- save empty index and empty table 
+	- read
+		- cache by prime id
+		- loading mask
+			- all | main object only | by hierachy StringMap...
+		- search 
+			- using index
+				- by equality | min | max
+				- limit result
+		- join
+			? return list
+			- nested loop (worst?)
+				- loop on A
+					- loop on B
+					- compare A value to B value
+			- hash join ( case equality )
+				- loop on A
+				- store every value in hash map
+				- loop on B
+					- test existance of B value in hash map A
+			- Merge join (case equality, large table )
+				- loop A
+				- store A value on disk
+				- sort
+				- loop B
+				- store B value on disk
+				- sort
+				? compare each value on disk
+		? order by
+		
+	- write
+		- persist new object
+		? detect modification on persisted object
+			? compare bytes conversion
+		- commit save to disk
+			? intance field iterator
+			- convert to bytes and split object using relation
+			- search fitting available page using map of page indexed by size
+			- write into page
+			? optimize for sequencial writing
+			- free previous page if any
+			- save index into new file
+			- purge old index
+
+object
+	storage file for index
+	storage file ( paginated using index ) for value 
+	? index ( map value using key provider )
+	
+LOCK SYSTEM
+- get query scope
+- wait query scope no longer colide with current lock
+- add query scope tu current lock
+- do the thing
+- remove query scope from lock
+
+INDEX / LOCK update
+- update index
+
+
+_______________________
+Index storage
+
+RBBinTree
+
+? autoflush
+
+? free space
+0 : root
+X*node size : node
+
+new field
+	Tree update stack
+	Node type update full, left, right, both?
+
+node :
+[1] : color
+[4] : count
+[4] : file position left
+[4] : file position right
+[X] : key
+[Y] : value
+comparator?
+
+
+? on create
+store modified node on new position
+change parent reference ( from null to position )
+
+? on update
+kill cache ref
+store modified node on new position
+change parent reference
+free backup
+
+cache
+	index node by file position
+	expire record on access count
+	optionnal max alloc
+	MUST not expire record with cached child
+	
+lifecycle
+node created (no file pos no child )
+node loaded ( file pos, child file pos )
+
+node modified ( add new child, change attribut )
+
+node sync
+	! get parent of modified node
+
+_______________________
+Usage
+	Database.persist( oMyObject );
+	Database.flush();
+	
+	
+	Store.getIndex().get( 1 );	// default
+	Store.getIndex().get( 'user#1' );
+	
+	# Get all big city with no influence and a character in it
+	get location.city 
+	where not exist location.city.influence
+	and exist location.character
+	
+	List oLocationStore.getCityIndex() location id -> list of interval of city
+	o
+	foreach( location in store )
+		if( not count location.charcter == 0 )
+			continue;
+		if( location.city is null )
+			continue;
+		if( not location.city.influence is empty )
+			continue;
+		add location
+			
+	get list not count location.charcter == 0
+	get list location.city 
+	
+	
+	
+Query GET by id
+	param :
+		- file name; default: data.bin 
+		- id;
+		- fectch mask; default: true-> fectch all; false -> fetch only object
+	algo:
+		check the cache
+		get page(IntInterval) from id using main index (RBtree)
+		read page from file
+		deserialise
+Query GET by join
+	algo:
+		get index left and right
+
+Query GET by exclude
+	algo:
+		
+		
+Persist object 
+	param :
+		storage maanger
+		object
+	algo:
+		get object id from storage manager
+
+
+create index with influence count and character
+or
+get city index exclude index influcence.parent
+inner join city.location and character.location
+	- foreach city.location check if character.location exist
+
+
+
+Scenario auth :
+	get user by login
+__________________________________________________________________________
+
+admin tool
+
+Feature
+	- create index

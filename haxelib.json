@@ -1,0 +1,15 @@
+{
+  "name": "storo",
+  "url" : "https://github.com/JeremyGiner/storo/",
+  "license": "MIT",
+  "tags": ["database", "orm"],
+  "description": "Database engine able to store class instance.",
+  "version": "1.0.0",
+  "classPath": "src/",
+  "releasenote": "Work in progress.",
+  "contributors": ["GINER jeremy"],
+  "dependencies": {
+    "sweet.ribbon": ""
+  }
+}
+
