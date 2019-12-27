@@ -19,18 +19,26 @@ class StorageDefault extends Storage<Int,IdOwner<Int>> {
 		oFilePath :Path, 
 		oEncoder :RibbonEncoder,
 		oDecoder :RibbonDecoder
+		
 	) {
-		super(oParent, sId, oFilePath, oEncoder, oDecoder );
-		//TODO use abstract function
 		// TODO : load offset from config
 		
-		var oPrimIndex :RedBlackTree<Int,Dynamic> = cast _oDescriptor.getPrimaryIndex();
-		_oKeyProvider = new KeyProviderDefault( 
-			this, 
-			new UniqueIdGenerator(
-				oPrimIndex.isEmpty() ? 0 : oPrimIndex.getKeyMax()+1
+		var oUniqueIdGenerator = new UniqueIdGenerator(0);
+		super(
+			oParent,
+			sId, 
+			oFilePath, 
+			oEncoder, 
+			oDecoder,
+			new KeyProviderDefault( 
+				this, 
+				oUniqueIdGenerator
 			) 
 		);
+		// Update offset
+		var oPrimIndex :RedBlackTree<Int,Dynamic> = cast _oDescriptor.getPrimaryIndex();
+		oUniqueIdGenerator.setOffset(oPrimIndex.isEmpty() ? 0 : oPrimIndex.getKeyMax()+1);
+		
 	}
 	
 	override function _createObjectCache() {

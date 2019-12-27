@@ -64,7 +64,8 @@ class Storage<CKey,CStored> {
 		sId :String,
 		oFilePath :Path, 
 		oEncoder :RibbonEncoder, 
-		oDecoder :RibbonDecoder
+		oDecoder :RibbonDecoder,
+		oKeyProvider :IKeyProvider<CKey,CStored>
 	) {
 		_sDescriptorFilePath = null;
 		_oDescriptor = null;
@@ -111,7 +112,7 @@ class Storage<CKey,CStored> {
 			}
 		}
 		
-		_oKeyProvider = null; //todo make abstract factory method
+		_oKeyProvider = oKeyProvider;
 		
 		// Open file
 		_oReader = File.read( getFilePath(), true );
@@ -121,47 +122,7 @@ class Storage<CKey,CStored> {
 		_mCacheObject = _createObjectCache();
 		_mCacheSerialized = _createSerializedCache(); 
 	}
-	/*
-	public static function create(
-		oParent :Database,
-		sId :String,
-		oFilePath :Path,
-		oEncoder :RibbonEncoder, 
-		oDecoder :RibbonDecoder
-	) {
-		
-		// Create storage file
-		File.saveContent( oFilePath.toString(), '' );
-		
-		// Create 
-		var o = new Storage( oParent, sId, oFilePath, oEncoder, oDecoder );
-		
-		// Create StorageDescriptor
-		o._createDescriptor();
-		
-	}
 	
-	public static function load(
-		oParent :Database,
-		sId :String,
-		oFilePath :Path,
-		oEncoder :RibbonEncoder, 
-		oDecoder :RibbonDecoder
-	) {
-		var o = new Storage( oParent, sId, oFilePath, oEncoder, oDecoder );
-		
-		// create descriptor file
-		o._loadDescriptor();
-		
-		// TODO : handle elsewhere
-		if ( o._oDescriptor == null ) {
-			throw 'Descriptor file not found';
-		}
-		
-		
-		
-	}
-*/
 //_____________________________________________________________________________
 //	Accessor
 
@@ -187,12 +148,16 @@ class Storage<CKey,CStored> {
 		}
 		
 		// convert to running relative path
-		for (i in 0...a.length)
-			a[i] = Path.join( [_oFilePath.dir, 'descriptor', a[i]] );
-		return a;
+		var aFile = [];
+		for (i in 0...a.length) {
+			if ( ! StringTools.startsWith(a[i], _oFilePath.file+'.' ) )
+				continue;
+			aFile.push( Path.join( [_oFilePath.dir, 'descriptor', a[i]] ) );
+		}
+		return aFile;
 	}
 	
-	public function getPrimaryIndexKeyProvider() {
+	public function getPrimaryIndexKeyProvider() {// Necessary ? TODO : remove if not
 		return _oKeyProvider;
 	}
 	

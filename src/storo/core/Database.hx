@@ -93,12 +93,30 @@ class Database {
 		return _mStorage.get('Default');
 	}
 	
+	public function getDefaultEncoder() {
+		return _oEncoder;
+	}
+	
+	public function getDefaultDecoder() {
+		return _oDecoder;
+	}
+	
+//_____________________________________________________________________________
+// Modifier
+
+	public function setStorage( sKey :String, oStorage :Storage<Dynamic,Dynamic> ) {
+		_mStorage.set( sKey, oStorage );
+	}
+	
 //_____________________________________________________________________________
 
 	public function persist( o :Dynamic ) {
 		
 		// Get associated storage
 		var oStorage = getStorageByObject( o );
+		
+		if ( oStorage == null )
+			throw new NotStorableException( o );
 		
 		// save
 		oStorage.persist(o);

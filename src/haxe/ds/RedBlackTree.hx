@@ -274,6 +274,9 @@ class RedBlackTree<CKey,CValue> implements IMap<CKey,CValue> {
 		return s.toString();
 	}
 	
+	public function clear() {
+		throw 'not implemented yet';
+	}
 	
 	
 //_____________________________________________________________________________
