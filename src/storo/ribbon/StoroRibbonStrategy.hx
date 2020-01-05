@@ -35,15 +35,20 @@ class StoroRibbonStrategy extends RibbonStrategy {
 		_oMappingInfoProvider = oMappingInfoProvider;
 		_oObjectValidator = new IsObject();
 		
-		super( oMappingInfoProvider );
-		
 		_oDatabase = oDatabase;
 		
-		_aCodexAtomic.push( { // Index 5
+		var aCodexAr = RibbonStrategy.getDefaultCodexBaseTypeAr();
+		aCodexAr.push({
+			index: 20,
 			encoderValidator: new Const(false),// validation implemented deirectly in getCodexIndex
 			encoder: new StoroRefEncoder( _oDatabase ),
 			decoder: new StoroRefDecoder( _oDatabase ),
 		} );
+		
+		super( oMappingInfoProvider, aCodexAr );
+		
+		
+		
 		/*
 		_aCodex[ 2 ] = {
 			encoderValidator: new And([
@@ -85,7 +90,7 @@ class StoroRibbonStrategy extends RibbonStrategy {
 			);
 			*/
 			// return codex index of StoroRef
-			return 5;
+			return 20;
 			
 		}
 		
@@ -109,23 +114,18 @@ class StoroRibbonStrategy extends RibbonStrategy {
 				case 6: // Array
 					aKeyList.add(iChildIndex);
 					aPath.push( '*' );
-				case 7: // StringMap
-					var i = 0;
-					for ( sKey in cast( oParentRef, StringMap<Dynamic> ).keys() ) {
-						if ( i == iChildIndex ){
-							aKeyList.add(sKey);
-							aPath.push( '*' );
-							break;
-							continue;
-						}
-							
-						i++;
-					}
-					throw 'StringMap does not have child #' + iChildIndex;
-				case 8: // Class instance
+				case 7,8: // StringMap
+					
+					var sKey = _getStringMapKeyByIndex(
+						cast( oParentRef.parent, StringMap<Dynamic> ),
+						iChildIndex
+					);
+					if( sKey == null )
+						throw 'StringMap does not have child #' + iChildIndex;
+					aKeyList.add(sKey);
+					aPath.push( '*' );
+				case 9: // Class instance
 					var aFieldName = _oMappingInfoProvider.getMappingInfo( oParentRef.parent ).getFieldNameAr();
-					trace( aFieldName );
-					trace( iChildIndex );
 					if ( aFieldName.length <= iChildIndex ) throw 'Index ' + iChildIndex + ' is out of bound for ' +aFieldName;
 					aPath.push( aFieldName[ iChildIndex ] ); 
 			}
@@ -134,4 +134,15 @@ class StoroRibbonStrategy extends RibbonStrategy {
 		return { mask: aPath.join('.'), key_list: aKeyList };
 	}
 	
+	
+	function _getStringMapKeyByIndex( m :StringMap<Dynamic>, iIndex :Int) :Null<String> {
+		var i = 0;
+		for ( sKey in m.keys() ) {
+			if ( i == iIndex ){
+				return sKey; 
+			}
+			i++;
+		}
+		return null;
+	}
 }
