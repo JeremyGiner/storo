@@ -8,7 +8,6 @@ import haxe.ds.RedBlackTree;
 import haxe.io.Bytes;
 import haxe.io.Path;
 import storo.StorageDescriptor;
-import storo.loading_mask.LoadingMask;
 import sweet.functor.comparator.ReflectComparator;
 import sweet.ribbon.MappingInfo;
 import sweet.ribbon.MappingInfoProvider;
@@ -23,6 +22,8 @@ import haxe.Constraints.IMap;
 import sys.io.FileSeek;
 import sweet.ribbon.RibbonMacro;
 import sweet.ribbon.RibbonEncoder.Iterator;
+import storo.ribbon.decoder.StoroRefDecoder;
+import storo.ribbon.IFullDecoder;
 
 /**
  * TODO : seperate descriptor file handling logic
@@ -37,7 +38,6 @@ class Storage<CKey,CStored> {
 	
 	var _sDescriptorFilePath :String;
 	var _oDescriptor :IStorageDescriptor<CKey>;
-	var _oStrategy :RibbonStrategy;
 	var _oDescriptorEncoder :RibbonEncoder;
 	var _oDescriptorDecoder :RibbonDecoder;
 	
@@ -78,8 +78,6 @@ class Storage<CKey,CStored> {
 		var oStrategy = new RibbonStrategy(oMappingInfoProvider);
 		_oDescriptorEncoder = new RibbonEncoder(oStrategy);
 		_oDescriptorDecoder = new RibbonDecoder(oStrategy);
-		// DEBUG
-		_oStrategy = oStrategy;
 		
 		//____________
 		
@@ -324,7 +322,7 @@ class Storage<CKey,CStored> {
 		
 		return oKey;
 	}
-	public function get( iId :CKey, oLoadingMask :LoadingMask = null ) :Dynamic {
+	public function get( iId :CKey, bPartialMode :Bool = false ) :Dynamic {
 		//TODO: implement loading mask
 		
 		// TODO : get from cache
@@ -344,6 +342,11 @@ class Storage<CKey,CStored> {
 			0, 
 			oPage.getSize() 
 		);
+		
+		if ( Std.is( _oDecoder, IFullDecoder ) )
+			cast(_oDecoder, IFullDecoder).setPartialMode( bPartialMode );
+		else
+			throw 'not implemented yet';
 		
 		// Decode
 		var o = _oDecoder.decode( oData );

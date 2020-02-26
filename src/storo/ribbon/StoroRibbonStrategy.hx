@@ -16,6 +16,7 @@ import sweet.ribbon.decoder.InstanceDecoder;
 import sweet.ribbon.encoder.InstanceEncoder;
 import storo.core.NotStorableException;
 import sweet.ribbon.RibbonEncoder.ParentReference;
+import sweet.ribbon.Reference;
 
 /**
  * ...
@@ -28,6 +29,8 @@ class StoroRibbonStrategy extends RibbonStrategy {
 	var _oMappingInfoProvider :IMappingInfoProvider;
 	var _oObjectValidator :IsObject;
 	
+	var _oRefDecoder :StoroRefDecoder;
+	
 	public function new( 
 		oMappingInfoProvider :IMappingInfoProvider = null,
 		oDatabase :Database
@@ -36,28 +39,17 @@ class StoroRibbonStrategy extends RibbonStrategy {
 		_oObjectValidator = new IsObject();
 		
 		_oDatabase = oDatabase;
+		_oRefDecoder = new StoroRefDecoder( _oDatabase );
 		
-		var aCodexAr = RibbonStrategy.getDefaultCodexBaseTypeAr();
-		aCodexAr.push({
+		var aCodexAr = RibbonStrategy.getDefaultCodexAr( oMappingInfoProvider );
+		aCodexAr.push( {
 			index: 20,
 			encoderValidator: new Const(false),// validation implemented deirectly in getCodexIndex
-			encoder: new StoroRefEncoder( _oDatabase ),
-			decoder: new StoroRefDecoder( _oDatabase ),
+			encoder: new StoroRefEncoder( _oDatabase, oMappingInfoProvider ),
+			decoder: _oRefDecoder,
 		} );
 		
-		super( oMappingInfoProvider, aCodexAr );
-		
-		
-		
-		/*
-		_aCodex[ 2 ] = {
-			encoderValidator: new And([
-				new Not( oValidator ),//TODO : validate depending on parent 
-				new IsObject(),
-			]),
-			encoder: new InstanceEncoder( oMappingInfoProvider ),
-			decoder: new InstanceDecoder(),
-		}*/
+		super( oMappingInfoProvider, null, aCodexAr );
 	}
 	
 	override public function getCodexIndex( o :Dynamic, aParent :List<ParentReference> ) :Null<Int> {
@@ -67,6 +59,7 @@ class StoroRibbonStrategy extends RibbonStrategy {
 		var oStorage :Storage<Dynamic,Dynamic>;
 		if ( 
 			_oObjectValidator.apply( o ) 
+			&& !Std.is(o,Reference)
 			&& (oStorage = _oDatabase.getStorageByObject( o )) != null
 			&& !aParent.isEmpty()
 		) {
@@ -76,19 +69,17 @@ class StoroRibbonStrategy extends RibbonStrategy {
 			
 			//TODO : get mask, get relation key
 			// Get field path
-			var oRelation = _getPath( aParent );
+			//var oRelation = _getPath( aParent );
 			
 			// Add relation
-			var oKeyProvider = oStorage.getPrimaryIndexKeyProvider();
-			/*
-			oStorage.getDescriptor().addRelation( 
-				oKeyProvider.get( aParent.last().parent ), 
-				oRelation.mask,
-				oKeyProvider.get( o ),
-				oRelation.key_list.length == 1 ? 
-					oRelation.key_list.first() : oRelation.key_list
-			);
-			*/
+			//var oKeyProvider = oStorage.getPrimaryIndexKeyProvider();
+			//oStorage.getDescriptor().addRelation( 
+				//oKeyProvider.get( aParent.last().parent ), 
+				//oRelation.mask,
+				//oKeyProvider.get( o ),
+				//oRelation.key_list.length == 1 ? 
+					//oRelation.key_list.first() : oRelation.key_list
+			//);
 			// return codex index of StoroRef
 			return 20;
 			

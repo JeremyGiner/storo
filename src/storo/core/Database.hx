@@ -2,10 +2,15 @@ package storo.core;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import storo.StorageDefault;
+import storo.ribbon.StoroRibbonDecoder;
 import storo.ribbon.StoroRibbonStrategy;
+import storo.tool.VPathAccessor;
 import sweet.ribbon.MappingInfoProvider;
 import sweet.ribbon.RibbonDecoder;
 import sweet.ribbon.RibbonEncoder;
+import storo.StoroReference;
+import sweet.ribbon.RibbonMacro;
+import sweet.ribbon.MappingInfo;
 
 /**
  * ...
@@ -34,9 +39,10 @@ class Database {
 		// load storage from config
 		
 		// TODO : make customizable
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, StoroReference );
 		_oStrategy = new StoroRibbonStrategy(oMappingInfoProvider,this);
 		_oEncoder = new RibbonEncoder( _oStrategy );
-		_oDecoder = new RibbonDecoder( _oStrategy );
+		_oDecoder = new StoroRibbonDecoder( _oStrategy );
 		
 		// Case : load default config
 		if ( oConfig == null ) {
@@ -54,11 +60,60 @@ class Database {
 //_____________________________________________________________________________
 // Accessor
 	
-	public function get<CKey>( sStorageId :String, iEntityId :CKey ) {
+	public function get( sStorageId :String, iEntityId :Dynamic, bPartial :Bool = false ) :Dynamic {
+		
 		var oStorage = _mStorage.get( sStorageId );
 		if ( oStorage == null )
 			return null;
-		return oStorage.get( iEntityId );
+		return oStorage.get( iEntityId, bPartial );
+	}
+	
+	public function loadPartial( o :Dynamic, aField :Array<Dynamic> ) {
+	
+		// TODO : what is aField in case o an array ?, aField optionnal?
+		
+		// Get all children, field, 
+		if ( Std.is(o, Array) ) {
+			var a :Array<Dynamic> = o;
+			// TODO: use aField
+			for ( i in 0...a.length ) {// TODO : use Lambda.map?
+				if( !Std.is(a[i],StoroReference)  )
+					continue;
+				a[i] = loadReference( a[i] );
+			}
+			return;
+		}
+		
+		if ( aField == null )
+			throw 'invalid parameter aField';
+		
+		if ( Std.is(o, StringMap) ) {
+			var oMap :StringMap<Dynamic> = cast o;
+			for ( sFieldName in aField ) {
+				if ( !Std.is(sFieldName, String) )
+					throw sFieldName+' should be String';
+				var oRef :Dynamic = oMap.get(sFieldName);
+				if ( !Std.is(oRef, StoroReference) )
+					throw oRef+' should be StoroReference for field "'+sFieldName+'"';
+				oMap.set(sFieldName, loadReference(cast oRef) );
+			}
+			return;
+		}
+		if ( Reflect.isObject( o ) ) {
+			for ( sFieldName in aField ) {
+				if ( !Std.is(sFieldName, String) )
+					throw sFieldName+' should be String';
+				var oRef :Dynamic = Reflect.field(o, sFieldName);
+				if ( !Std.is(oRef, StoroReference) )
+					throw oRef+' should be StoroReference for field "'+sFieldName+'"';
+				Reflect.setField( o, sFieldName, loadReference(cast oRef) );
+			}
+			return;
+		}
+	}
+	
+	public function loadReference( o :StoroReference<Dynamic> ) {
+		return this.mustGet( o.getStorageId(), o.getEntityId(), true );
 	}
 	
 	public function getStorage( sStorageId :String ) :Storage<Dynamic,Dynamic> {
@@ -72,13 +127,15 @@ class Database {
 		return oStorage.remove( iEntityId );
 	}
 	
-	public function mustGet<CKey>( sStorageId :String, iEntityId :CKey ) {
+	public function mustGet<CKey>( sStorageId :String, iEntityId :CKey, bPartialMode :Bool = false ) {
 		var oStorage = _mStorage.get( sStorageId );
 		if ( oStorage == null )// todo throw object
 			throw 'Storage #' + sStorageId + ' does not exist';
 		if ( !oStorage.exist( iEntityId ) ) // todo throw object
 			throw 'Object #'+Std.string(iEntityId)+' in Storage #' + sStorageId + ' does not exist';
-		return oStorage.get( iEntityId );
+		
+		trace( oStorage.get( iEntityId, bPartialMode ) );	
+		return oStorage.get( iEntityId, bPartialMode );
 	}
 	
 	public function getStorageByObject( o :Dynamic ) {
@@ -106,6 +163,19 @@ class Database {
 
 	public function setStorage( sKey :String, oStorage :Storage<Dynamic,Dynamic> ) {
 		_mStorage.set( sKey, oStorage );
+	}
+
+//_____________________________________________________________________________
+// Factory
+
+	public function createRef( o :Dynamic ) {
+		var oStorage = getStorageByObject( o );
+		if ( oStorage == null )
+			throw 'nostorage available for "' + o + '"';
+		return new StoroReference<Dynamic>( 
+			oStorage.getPrimaryIndexKeyProvider().get(o), 
+			oStorage.getId()
+		);
 	}
 	
 //_____________________________________________________________________________
@@ -141,11 +211,12 @@ class Database {
 	
 	
 	function _createStorage( sStorageId :String ) {
+		trace( _oStrategy );
 		//TODO : make abstract and move content into DatabaseDefault
 		var oStorage = new StorageDefault(
 			this,
 			sStorageId,
-			new Path('Default.storage'),
+			new Path(sStorageId+'.storage'),
 			_oEncoder,
 			_oDecoder
 		);

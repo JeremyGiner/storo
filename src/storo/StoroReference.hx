@@ -18,7 +18,7 @@ class StoroReference<CKey> {
 		return _iEntityId;
 	}
 	
-	public function getStorageId {
+	public function getStorageId() {
 		return _sStorageId;
 	}
 	
