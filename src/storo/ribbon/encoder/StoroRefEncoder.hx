@@ -1,33 +1,43 @@
 package storo.ribbon.encoder;
 import haxe.io.Bytes;
 import sweet.ribbon.IMappingInfoProvider;
+import sweet.ribbon.MappingInfo;
 import sweet.ribbon.encoder.ISubEncoder;
 import storo.core.Database;
 import sweet.ribbon.encoder.InstanceEncoder;
 import sweet.ribbon.encoder.IntEncoder;
 import sweet.ribbon.encoder.StringEncoder;
 import sweet.ribbon.tool.BytesTool;
+import sweet.ribbon.RibbonMacro;
 
 /**
  * ...
  * @author GINER Jeremy
  */
-class StoroRefEncoder extends InstanceEncoder {
+class StoroRefEncoder implements ISubEncoder<Dynamic> {
 
 	var _oDatabase :Database;
+	var _oMappingInfo :MappingInfo;
 	
-	public function new( oDatabase :Database, oMappingInfoProvider :IMappingInfoProvider ) {
+	public function new( oDatabase :Database ) {
 		_oDatabase = oDatabase;
-		super(oMappingInfoProvider);
+		_oMappingInfo = new MappingInfo('storo.StoroReference', ['_iEntityId','_sStorageId']);
 	}
 	
-	override public function getChildAr( o :Dynamic ) {
+	public function encode( o :Dynamic, iClassDescIndex :Null<Int> = null ) {
+		return (new IntEncoder()).encode( iClassDescIndex ); //TODO use singleton
+	}
+	
+	public function getChildAr( o :Dynamic ) {
 		
 		var oRef = _oDatabase.createRef( o );
-		return super.getChildAr( oRef );
+		var a = new List<Dynamic>();
+		for ( sField in getMappingInfo( oRef ).getFieldNameAr() )
+			a.push( Reflect.field( o, sField ) );
+		return a;
 	}
 	
-	override public function getMappingInfo( o :Dynamic ) {
-		return _oMappingInfoProvider.getByClass( StoroReference );
+	public function getMappingInfo( o :Dynamic ) {
+		return _oMappingInfo;
 	}
 }

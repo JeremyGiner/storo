@@ -45,7 +45,7 @@ class StoroRibbonStrategy extends RibbonStrategy {
 		aCodexAr.push( {
 			index: 20,
 			encoderValidator: new Const(false),// validation implemented deirectly in getCodexIndex
-			encoder: new StoroRefEncoder( _oDatabase, oMappingInfoProvider ),
+			encoder: new StoroRefEncoder( _oDatabase ),
 			decoder: _oRefDecoder,
 		} );
 		
