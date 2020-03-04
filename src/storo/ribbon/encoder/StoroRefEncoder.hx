@@ -29,11 +29,10 @@ class StoroRefEncoder implements ISubEncoder<Dynamic> {
 	}
 	
 	public function getChildAr( o :Dynamic ) {
-		
 		var oRef = _oDatabase.createRef( o );
 		var a = new List<Dynamic>();
 		for ( sField in getMappingInfo( oRef ).getFieldNameAr() )
-			a.push( Reflect.field( o, sField ) );
+			a.push( Reflect.field( oRef, sField ) );
 		return a;
 	}
 	
