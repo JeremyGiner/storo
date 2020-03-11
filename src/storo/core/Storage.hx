@@ -24,6 +24,8 @@ import sweet.ribbon.RibbonMacro;
 import sweet.ribbon.RibbonEncoder.Iterator;
 import storo.ribbon.decoder.StoroRefDecoder;
 import storo.ribbon.IFullDecoder;
+import sys.thread.Deque;
+import sys.thread.Mutex;
 
 /**
  * TODO : seperate descriptor file handling logic
@@ -55,6 +57,9 @@ class Storage<CKey,CStored> {
 	var _lFlushQueue :List<CStored>;// priority over cached object
 	// DEBUG
 	var _mFlushCache :ObjectMap<Dynamic,Bool>;
+	
+	var _oMutex :Mutex;
+	var _oDeque :Deque<IStorageDescriptor<CKey>>;// Synchronize descriptor
 	
 //_____________________________________________________________________________
 //	Constructor
@@ -119,6 +124,8 @@ class Storage<CKey,CStored> {
 		// Create cache
 		_mCacheObject = _createObjectCache();
 		_mCacheSerialized = _createSerializedCache(); 
+		
+		_oMutex = new Mutex(); // TODO : acquire on flush and mark database from main thread as obsolete
 	}
 	
 //_____________________________________________________________________________
@@ -374,6 +381,13 @@ class Storage<CKey,CStored> {
 	
 	public function flush() {
 		
+		// Sync with other thread
+		_oMutex.acquire();
+		var oSync :Null<IStorageDescriptor<CKey>> = null;
+		while ( (oSync = _oDeque.pop(false)) != null ){};
+		if ( oSync != null )
+			_oDescriptor = oSync;
+		
 		// TODO : ? handle case flush called within flush 
 		var o = null;
 		while ( (o = _lFlushQueue.pop()) != null ) {
@@ -428,6 +442,9 @@ class Storage<CKey,CStored> {
 		_mFlushCache = new ObjectMap<Dynamic,Bool>();
 		
 		
+		// Sync other thread to this one
+		_oDeque.push( _oDescriptor );
+		_oMutex.release();
 		
 		// TODO : return quantity of obj saved
 		// TODO : return total size
