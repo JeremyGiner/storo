@@ -974,7 +974,9 @@ class TreeIterator<CKey,CValue> {
 	var _lNode :List<INode<CKey,CValue>>;
 
 	public function new( oRoot :INode<CKey,CValue>) {
-		_lNode.add( oRoot );
+		_lNode = new List<INode<CKey,CValue>>();
+		if( oRoot != null )
+			_lNode.add( oRoot );
 	}
 
 	public function hasNext() {
@@ -989,11 +991,11 @@ class TreeIterator<CKey,CValue> {
 			
 			if( oNode.getRight() != null )
 				_lNode.push( oNode.getRight() );
-			if ( oNode.getLeft() == null )
-				return oNode.getValue();
-			// else
-			_lNode.push( oNode.getLeft() );
-			oNode = oNode.getLeft();
+			if( oNode.getLeft() != null )
+				_lNode.push( oNode.getLeft() );
+				
+			return oNode.getValue();
+			
 		}
 		return null;
 	}
