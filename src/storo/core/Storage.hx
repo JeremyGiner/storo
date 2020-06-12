@@ -4,7 +4,8 @@ import haxe.Json;
 import haxe.Serializer;
 import haxe.Unserializer;
 import haxe.ds.ObjectMap;
-import haxe.ds.RedBlackTree;
+import haxe.ds.BalancedTreeFunctor;
+import haxe.ds.BalancedTree.TreeNode;
 import haxe.io.Bytes;
 import haxe.io.Path;
 import storo.StorageDescriptor;
@@ -14,6 +15,8 @@ import sweet.ribbon.MappingInfoProvider;
 import sweet.ribbon.RibbonDecoder;
 import sweet.ribbon.RibbonEncoder;
 import sweet.ribbon.RibbonStrategy;
+import storo.indexer.ForeignIdIndexer;
+import storo.indexer.VPathIndexer;
 import sys.io.File;
 import sys.FileSystem;
 import sys.io.FileInput;
@@ -26,6 +29,8 @@ import storo.ribbon.decoder.StoroRefDecoder;
 import storo.ribbon.IFullDecoder;
 import sys.thread.Deque;
 import sys.thread.Mutex;
+import storo.tool.VPathAccessor;
+import sweet.functor.comparator.IntAscComparator;
 
 /**
  * TODO : seperate descriptor file handling logic
@@ -76,10 +81,14 @@ class Storage<CKey,CStored> {
 		_oDescriptor = null;
 		var oMappingInfoProvider = new MappingInfoProvider();
 		RibbonMacro.setMappingInfo( oMappingInfoProvider, ReflectComparator);
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, IntAscComparator);
 		RibbonMacro.setMappingInfo( oMappingInfoProvider, StorageDescriptor);
-		RibbonMacro.setMappingInfo( oMappingInfoProvider, RedBlackTree);
-		RibbonMacro.setMappingInfo( oMappingInfoProvider, Node);
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, BalancedTreeFunctor);
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, TreeNode);
 		RibbonMacro.setMappingInfo( oMappingInfoProvider, IntervalInt);
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, ForeignIdIndexer);
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, VPathIndexer);
+		RibbonMacro.setMappingInfo( oMappingInfoProvider, VPathAccessor);
 		var oStrategy = new RibbonStrategy(oMappingInfoProvider);
 		_oDescriptorEncoder = new RibbonEncoder(oStrategy);
 		_oDescriptorDecoder = new RibbonDecoder(oStrategy);
@@ -126,6 +135,8 @@ class Storage<CKey,CStored> {
 		_mCacheSerialized = _createSerializedCache(); 
 		
 		_oMutex = new Mutex(); // TODO : acquire on flush and mark database from main thread as obsolete
+	
+		_oDeque = new Deque<IStorageDescriptor<CKey>>();
 	}
 	
 //_____________________________________________________________________________
@@ -178,11 +189,12 @@ class Storage<CKey,CStored> {
 		_oDescriptor.getPrimaryIndex().get( iId );
 		_oDescriptor.getPrimaryIndex().remove( iId );
 		
-		// add crate as available
+		// set crate as available
 		_oDescriptor.remove( iId );
 		
-		// remove from foreign index 
-		throw 'TODO';
+		// Update indexer
+		for( oIndexer in _oDescriptor.getIndexerMap() )
+			oIndexer.removeEntity( iId );
 		
 		//TODO : return ture on sucess; false else
 	}
@@ -191,13 +203,14 @@ class Storage<CKey,CStored> {
 
 		var bFlag = false;
 		
-		for ( o in _oDescriptor.getPrimaryIndex() ) {
+		var oPrimary = _oDescriptor.getPrimaryIndex();
+		for ( oEntityId in oPrimary.keys() ) {
 			if ( bFlag == false ) {
 				bFlag = true;
 				trace('WARNING: Creating index with stored entities already existing');
 			}
-			
-			oIndexer.add( o );
+			var oEntity = this.get(oEntityId, true);
+			oIndexer.addEntity( oEntity, oEntityId);
 		}
 		
 		_oDescriptor.addIndexer( sKey, oIndexer);
@@ -332,6 +345,7 @@ class Storage<CKey,CStored> {
 	public function get( iId :CKey, bPartialMode :Bool = false ) :Dynamic {
 		//TODO: implement loading mask
 		
+		// TODO : get from flush queue
 		// TODO : get from cache
 		
 		// Get page
@@ -359,6 +373,22 @@ class Storage<CKey,CStored> {
 		var o = _oDecoder.decode( oData );
 		
 		return o;
+	}
+	
+	public function getAr( aId :Array<CKey>, bPartialMode :Bool = false ) :Array<Dynamic> {
+		var a = new Array(); a.resize( aId.length );
+		for ( i in 0...aId.length ) {
+			a[i] = mustGet(aId[i],bPartialMode);
+		}
+		return a;
+	}
+	
+	public function mustGet( iEntityId :Dynamic, bPartialMode :Bool = false ) :Dynamic {
+
+		if ( !exist( iEntityId ) ) // todo throw object
+			throw 'Object #'+Std.string(iEntityId)+' in Storage #' + _sId + ' does not exist';
+			
+		return get( iEntityId, bPartialMode );
 	}
 	
 	public function exist( iId :CKey ) {
@@ -421,16 +451,22 @@ class Storage<CKey,CStored> {
 			// ? update cache 
 			//_mCacheObject.remove( iId );
 			
+			var oKey = _oKeyProvider.get( o );
+			
 			// update primary index file
 			getDescriptor().getPrimaryIndex().set( 
-				_oKeyProvider.get( o ), 
+				oKey, 
 				oCrate
 			);
+			// Update indexer
+			for( oIndexer in _oDescriptor.getIndexerMap() )
+				oIndexer.addEntity( o, oKey );
 			
 			// update storage file
 			if( ! bSeeked )
 				_oWriter.seek( oCrate.getMin(), FileSeek.SeekBegin );
 			_oWriter.writeFullBytes( oBytes, 0, oCrate.getSize() );
+			
 			
 		}
 		_oWriter.flush();
@@ -441,14 +477,12 @@ class Storage<CKey,CStored> {
 		
 		_mFlushCache = new ObjectMap<Dynamic,Bool>();
 		
-		
 		// Sync other thread to this one
 		_oDeque.push( _oDescriptor );
 		_oMutex.release();
 		
 		// TODO : return quantity of obj saved
-		// TODO : return total size
-		
+		// TODO : return total size		
 	}
 	
 }

@@ -5,7 +5,6 @@ import haxe.io.Path;
 import sweet.ribbon.RibbonDecoder;
 import sweet.ribbon.RibbonEncoder;
 import haxe.io.Bytes;
-import haxe.ds.RedBlackTree;
 
 /**
  * ...

@@ -127,14 +127,13 @@ class Database {
 		return oStorage.remove( iEntityId );
 	}
 	
-	public function mustGet<CKey>( sStorageId :String, iEntityId :CKey, bPartialMode :Bool = false ) {
+	public function mustGet( sStorageId :String, iEntityId :Dynamic, bPartialMode :Bool = false ) :Dynamic {
 		var oStorage = _mStorage.get( sStorageId );
 		if ( oStorage == null )// todo throw object
 			throw 'Storage #' + sStorageId + ' does not exist';
 		if ( !oStorage.exist( iEntityId ) ) // todo throw object
 			throw 'Object #'+Std.string(iEntityId)+' in Storage #' + sStorageId + ' does not exist';
 		
-		trace( oStorage.get( iEntityId, bPartialMode ) );	
 		return oStorage.get( iEntityId, bPartialMode );
 	}
 	
@@ -161,8 +160,10 @@ class Database {
 //_____________________________________________________________________________
 // Modifier
 
-	public function setStorage( sKey :String, oStorage :Storage<Dynamic,Dynamic> ) {
-		_mStorage.set( sKey, oStorage );
+	public function setStorage( oStorage :Storage<Dynamic,Dynamic> ) {
+		if ( _mStorage.exists( oStorage.getId() ) )
+			throw 'Trying to overwrite storage "'+oStorage.getId()+'"';
+		_mStorage.set( oStorage.getId(), oStorage );
 	}
 
 //_____________________________________________________________________________

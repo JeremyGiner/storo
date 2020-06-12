@@ -25,7 +25,14 @@ class Main {
 		oDatabase.persist( new Customer('toto', [new Customer('toto.titi'), new Customer('toto.tutu')]) );
 		oDatabase.flush();
 		
-		oDatabase.getStorage('Default').addIndexer( '_sName', new IndexerUniqKeyStackValue( Const( true ), new FieldAccessorDefault(['_sName', !!TODO handle wildcard ? use as key]) ) );
+		oDatabase.getStorage('Default')
+			.addIndexer( 
+				'_sName', 
+				new IndexerUniqKeyStackValue(
+					Const( true ), 
+					new FieldAccessorDefault(['_sName', /*!!TODO handle wildcard ? use as key*/]) ) 
+			)
+		;
 		//trace( oDatabase.get('Default', 1) );
 		
 		//trace( oDatabase.getStorage('Default').getDescriptor().getRelationIndex() );

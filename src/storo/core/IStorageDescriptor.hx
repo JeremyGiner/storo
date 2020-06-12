@@ -1,7 +1,6 @@
 package storo.core;
 import haxe.Constraints.IMap;
 import haxe.ds.StringMap;
-import haxe.ds.RedBlackTree;
 
 /**
  * Entity handling the segmentation inside a Storage.
@@ -12,7 +11,10 @@ interface IStorageDescriptor<CKey> {
 	public function getPrimaryIndex() :IMap<CKey,IntervalInt>;
 	public function getCrate( iId :CKey ) :IntervalInt;
 	public function findAvailableCrate( iSize :Int ) :IntervalInt;
-	public function add( iId :CKey, oPage :IntervalInt ) :Void;
+	//public function add( iId :CKey, oPage :IntervalInt ) :Void;
 	public function remove( iId :CKey ) :Bool;
+	
+	public function getIndexer( sKey :String ) :IIndexer<Dynamic,Dynamic>;
+	public function getIndexerMap() :StringMap<IIndexer<Dynamic,Dynamic>>;
 	public function addIndexer( sKey :String, oIndexer :IIndexer<Dynamic,Dynamic> ) :Void;
 }

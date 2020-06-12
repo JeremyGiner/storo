@@ -5,7 +5,7 @@ import haxe.io.Path;
 import sweet.ribbon.RibbonDecoder;
 import sweet.ribbon.RibbonEncoder;
 import haxe.io.Bytes;
-import haxe.ds.RedBlackTree;
+import haxe.ds.BalancedTreeFunctor;
 
 /**
  * ...
@@ -36,7 +36,7 @@ class StorageDefault extends Storage<Int,IdOwner<Int>> {
 			) 
 		);
 		// Update offset
-		var oPrimIndex :RedBlackTree<Int,Dynamic> = cast _oDescriptor.getPrimaryIndex();
+		var oPrimIndex :BalancedTreeFunctor<Int,Dynamic> = cast _oDescriptor.getPrimaryIndex();
 		oUniqueIdGenerator.setOffset(oPrimIndex.isEmpty() ? 0 : oPrimIndex.getKeyMax()+1);
 		
 	}

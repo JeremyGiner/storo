@@ -9,7 +9,8 @@
   "releasenote": "Work in progress.",
   "contributors": ["GINER jeremy"],
   "dependencies": {
-    "sweet.ribbon": ""
+    "sweet.ribbon": "",
+    "sweet.vpath": ""
   }
 }
 
