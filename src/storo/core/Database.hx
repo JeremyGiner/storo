@@ -60,6 +60,10 @@ class Database {
 //_____________________________________________________________________________
 // Accessor
 	
+	public function getStorageList() {
+		return _mStorage;
+	}
+
 	public function get( sStorageId :String, iEntityId :Dynamic, bPartial :Bool = false ) :Dynamic {
 		
 		var oStorage = _mStorage.get( sStorageId );
